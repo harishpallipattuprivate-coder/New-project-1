@@ -1,0 +1,2325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campus Buddy - AI Career Skill Gap Analyzer & Learning Assistant</title>
+  <!-- Supabase Official JS Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* ==========================================================================
+       CSS VARIABLES & THEME DEFINITIONS (Light & Dark Mode)
+       ========================================================================== */
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #e0e7ff;
+      --secondary: #06b6d4;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      
+      --bg-base: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-card: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --sidebar-bg: #0f172a;
+      --sidebar-text: #94a3b8;
+      --sidebar-active: #ffffff;
+      --sidebar-active-bg: #1e293b;
+      
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --radius: 12px;
+      --transition: all 0.25s ease;
+    }
+
+    [data-theme="dark"] {
+      --bg-base: #0b0f19;
+      --bg-surface: #111827;
+      --bg-card: #1f2937;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border-color: #374151;
+      --primary-light: rgba(79, 70, 229, 0.2);
+      --sidebar-bg: #030712;
+      --sidebar-text: #6b7280;
+      --sidebar-active-bg: #111827;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* ==========================================================================
+       SIDEBAR NAVIGATION
+       ========================================================================== */
+    .sidebar {
+      width: 260px;
+      background-color: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 50;
+      transition: var(--transition);
+      box-shadow: 2px 0 10px rgba(0,0,0,0.15);
+    }
+
+    .brand {
+      padding: 24px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4);
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-subtitle {
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+
+    .nav-menu {
+      list-style: none;
+      padding: 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: var(--sidebar-text);
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.92rem;
+      transition: var(--transition);
+      user-select: none;
+    }
+
+    .nav-item:hover {
+      background-color: rgba(255,255,255,0.05);
+      color: #ffffff;
+    }
+
+    .nav-item.active {
+      background-color: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+    }
+
+    .nav-item span.icon {
+      font-size: 1.2rem;
+      width: 24px;
+      text-align: center;
+    }
+
+    .user-profile-badge {
+      padding: 16px;
+      margin: 12px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .avatar-circle {
+      width: 38px;
+      height: 38px;
+      background: #3b82f6;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+
+    .user-info {
+      overflow: hidden;
+    }
+
+    .user-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #ffffff;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .user-role {
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+
+    /* ==========================================================================
+       MAIN CONTENT AREA & TOPBAR
+       ========================================================================== */
+    .main-wrapper {
+      margin-left: 260px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      height: 64px;
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      backdrop-filter: blur(8px);
+    }
+
+    .page-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-icon {
+      background: var(--bg-base);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: var(--transition);
+    }
+
+    .btn-icon:hover {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .mobile-menu-btn {
+      display: none;
+    }
+
+    /* ==========================================================================
+       PAGES & TAB SECTIONS
+       ========================================================================== */
+    .content-area {
+      padding: 28px;
+      flex: 1;
+      max-width: 1300px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease forwards;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ==========================================================================
+       COMMON UI COMPONENTS & CARDS
+       ========================================================================== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: var(--transition);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .stat-blue { background: rgba(79, 70, 229, 0.12); color: var(--primary); }
+    .stat-cyan { background: rgba(6, 182, 212, 0.12); color: var(--secondary); }
+    .stat-emerald { background: rgba(16, 185, 129, 0.12); color: var(--success); }
+    .stat-amber { background: rgba(245, 158, 11, 0.12); color: var(--warning); }
+
+    .stat-val {
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: none;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--bg-base);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border-color);
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+    }
+
+    /* Form elements */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+      font-size: 0.92rem;
+      transition: var(--transition);
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    textarea.form-control {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    /* Skills Pill badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .badge-primary { background: var(--primary-light); color: var(--primary); }
+    .badge-success { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    .badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+
+    /* Progress bar */
+    .progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      border-radius: 10px;
+      transition: width 0.4s ease;
+    }
+
+    /* ==========================================================================
+       CHATBOT STYLES
+       ========================================================================== */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 160px);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-surface);
+    }
+
+    .chat-bot-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bot-status {
+      width: 10px;
+      height: 10px;
+      background: var(--success);
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      background-color: var(--bg-base);
+    }
+
+    .message {
+      display: flex;
+      gap: 12px;
+      max-width: 80%;
+      animation: msgPop 0.25s ease;
+    }
+
+    @keyframes msgPop {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .msg-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .message.bot .msg-avatar {
+      background: var(--primary);
+      color: white;
+    }
+
+    .message.user .msg-avatar {
+      background: #0ea5e9;
+      color: white;
+    }
+
+    .msg-bubble {
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      box-shadow: var(--shadow-sm);
+      word-break: break-word;
+    }
+
+    .message.bot .msg-bubble {
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-top-left-radius: 2px;
+    }
+
+    .message.user .msg-bubble {
+      background: var(--primary);
+      color: white;
+      border-top-right-radius: 2px;
+    }
+
+    .msg-time {
+      font-size: 0.7rem;
+      margin-top: 4px;
+      opacity: 0.7;
+      text-align: right;
+    }
+
+    .quick-prompts {
+      display: flex;
+      gap: 8px;
+      padding: 10px 20px;
+      overflow-x: auto;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    .prompt-chip {
+      background: var(--bg-base);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--text-main);
+    }
+
+    .prompt-chip:hover {
+      background: var(--primary-light);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .chat-input-bar {
+      padding: 14px 20px;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-size: 0.92rem;
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .typing-indicator {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 14px;
+      background: var(--bg-surface);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      width: fit-content;
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      animation: blink 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    /* ==========================================================================
+       ASSESSMENT & ROADMAP STYLES
+       ========================================================================== */
+    .quiz-option {
+      background: var(--bg-base);
+      border: 1px solid var(--border-color);
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .quiz-option:hover {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    .quiz-option.selected {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .roadmap-timeline {
+      position: relative;
+      padding-left: 28px;
+      border-left: 2px dashed var(--border-color);
+      margin-left: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .timeline-item {
+      position: relative;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: -35px;
+      top: 4px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 3px solid var(--bg-surface);
+    }
+
+    .timeline-dot.done {
+      background: var(--success);
+    }
+
+    .task-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    /* ==========================================================================
+       RESPONSIVE DESIGN (Tablets & Mobile)
+       ========================================================================== */
+    @media (max-width: 900px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main-wrapper {
+        margin-left: 0;
+      }
+      .mobile-menu-btn {
+        display: flex;
+      }
+    }
+    /* ==========================================================================
+       AUTH & SUPABASE MODAL STYLES
+       ========================================================================== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 440px;
+      box-shadow: var(--shadow-lg);
+      padding: 28px;
+      animation: modalSlide 0.25s ease;
+      position: relative;
+    }
+
+    @keyframes modalSlide {
+      from { transform: translateY(16px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .modal-close:hover {
+      color: var(--text-main);
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .auth-tab-btn {
+      flex: 1;
+      padding: 8px;
+      background: none;
+      border: none;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 6px;
+      transition: var(--transition);
+    }
+
+    .auth-tab-btn.active {
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    .auth-status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+    }
+
+    .auth-status-chip.guest {
+      background: rgba(148, 163, 184, 0.15);
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==========================================================================
+       SIDEBAR NAVIGATION
+       ========================================================================== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-icon">CB</div>
+      <div>
+        <div class="brand-title">Campus Buddy</div>
+        <div class="brand-subtitle">AI Skill Gap & Learning Hub</div>
+      </div>
+    </div>
+
+    <ul class="nav-menu">
+      <li class="nav-item active" onclick="switchTab('dashboard')">
+        <span class="icon">📊</span> Dashboard
+      </li>
+      <li class="nav-item" onclick="switchTab('analyzer')">
+        <span class="icon">🎯</span> Skill Gap Analyzer
+      </li>
+      <li class="nav-item" onclick="switchTab('assessment')">
+        <span class="icon">📝</span> Skill Quiz & Assessment
+      </li>
+      <li class="nav-item" onclick="switchTab('roadmap')">
+        <span class="icon">🗺️</span> Learning Roadmap
+      </li>
+      <li class="nav-item" onclick="switchTab('practice')">
+        <span class="icon">💻</span> Hands-on Tasks
+      </li>
+      <li class="nav-item" onclick="switchTab('chatbot')">
+        <span class="icon">🤖</span> AI Campus Chatbot
+      </li>
+      <li class="nav-item" onclick="switchTab('profile')">
+        <span class="icon">👤</span> My Profile & Résumé
+      </li>
+    </ul>
+
+    <!-- Student Info footer in sidebar -->
+    <div class="user-profile-badge">
+      <div class="avatar-circle" id="sidebarAvatar">ST</div>
+      <div class="user-info" style="flex:1;">
+        <div class="user-name" id="sidebarStudentName">Alex Kumar</div>
+        <div class="user-role" id="sidebarUserStatus">Guest Student</div>
+      </div>
+    </div>
+    <div style="padding: 0 16px 16px 16px; display:flex; gap: 8px;">
+      <button class="btn btn-secondary btn-sm" style="flex:1; justify-content:center; font-size:0.75rem;" onclick="openAuthModal()" id="sidebarAuthBtn">🔐 Login</button>
+      <button class="btn btn-secondary btn-sm" style="justify-content:center; font-size:0.75rem;" onclick="openConfigModal()" title="Supabase Credentials">⚙️</button>
+    </div>
+  </aside>
+
+  <!-- ==========================================================================
+       MAIN CONTENT CONTAINER
+       ========================================================================== -->
+  <div class="main-wrapper">
+    <!-- Topbar Navigation -->
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap: 12px;">
+        <button class="btn-icon mobile-menu-btn" onclick="toggleSidebar()" title="Toggle Menu">☰</button>
+        <h2 class="page-title" id="pageTitle">📊 Dashboard Overview</h2>
+      </div>
+
+      <div class="topbar-actions">
+        <!-- Auth Status Pill -->
+        <span class="auth-status-chip guest" id="topbarAuthBadge">⚡ Local Mode</span>
+        <!-- Login / Logout action button -->
+        <button class="btn btn-secondary btn-sm" id="topbarAuthBtn" onclick="openAuthModal()">🔐 Supabase Login</button>
+        <!-- Theme Toggle -->
+        <button class="btn-icon" id="themeToggleBtn" onclick="toggleTheme()" title="Switch Light/Dark Mode">🌙</button>
+        <button class="btn btn-primary btn-sm" onclick="switchTab('analyzer')">+ New Skill Check</button>
+      </div>
+    </header>
+
+    <!-- Pages / Viewports -->
+    <main class="content-area">
+
+      <!-- ==========================================
+           TAB 1: DASHBOARD
+           ========================================== -->
+      <section id="tab-dashboard" class="tab-content active">
+        <!-- Top Stats Row -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon stat-blue">🎯</div>
+            <div>
+              <div class="stat-val" id="statMatchRate">65%</div>
+              <div class="stat-label">Role Readiness</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon stat-cyan">✅</div>
+            <div>
+              <div class="stat-val" id="statTasksDone">4 / 10</div>
+              <div class="stat-label">Tasks Completed</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon stat-emerald">🔥</div>
+            <div>
+              <div class="stat-val" id="statStreak">5 Days</div>
+              <div class="stat-label">Learning Streak</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon stat-amber">🏆</div>
+            <div>
+              <div class="stat-val" id="statQuizScore">80%</div>
+              <div class="stat-label">Latest Assessment</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Continuous Cycle Highlight Banner -->
+        <div class="card" style="background: linear-gradient(135deg, rgba(79,70,229,0.08), rgba(6,182,212,0.08)); border: 1px solid var(--primary-light);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <span class="badge badge-primary">Standout Feature</span>
+              <h3 style="margin-top: 6px; font-size: 1.2rem;">Continuous Skill Growth Loop</h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">
+                1. Analyze Gap ➔ 2. Follow Roadmap ➔ 3. Practice Tasks ➔ 4. Retake Assessment to verify growth!
+              </p>
+            </div>
+            <button class="btn btn-primary" onclick="switchTab('analyzer')">Analyze My Gap Now →</button>
+          </div>
+        </div>
+
+        <!-- Dashboard Two-Column Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+          <!-- Current Target Role Status -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🎯 Target Role Progress</h3>
+              <span class="badge badge-primary" id="dashRoleTitle">Frontend Developer</span>
+            </div>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 12px;">
+              Skills comparison against industry benchmarks for first-year & junior job openings.
+            </p>
+            <div style="margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600;">
+                <span>Skill Match Ratio</span>
+                <span id="dashMatchPercent">65%</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="dashMatchBar" style="width: 65%;"></div>
+              </div>
+            </div>
+
+            <div style="margin-top: 16px;">
+              <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">MASTERED SKILLS</div>
+              <div id="dashMasteredPills" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <span class="badge badge-success">HTML5</span>
+                <span class="badge badge-success">CSS3</span>
+                <span class="badge badge-success">Basic Git</span>
+              </div>
+            </div>
+
+            <div style="margin-top: 16px;">
+              <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">IDENTIFIED GAPS TO LEARN</div>
+              <div id="dashGapPills" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <span class="badge badge-danger">DOM Manipulation</span>
+                <span class="badge badge-danger">Async / Fetch API</span>
+                <span class="badge badge-danger">Responsive Grid</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Action Assistant Widget -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🤖 Campus Buddy Assistant</h3>
+              <button class="btn btn-secondary btn-sm" onclick="switchTab('chatbot')">Open Full Chat</button>
+            </div>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 14px;">
+              Need quick guidance on college hackathons, beginner projects, or tech skills?
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <button class="btn btn-secondary" style="justify-content: flex-start; text-align: left;" onclick="askQuickFromDash('How do I participate in my first college hackathon?')">
+                💡 How do I participate in my first hackathon?
+              </button>
+              <button class="btn btn-secondary" style="justify-content: flex-start; text-align: left;" onclick="askQuickFromDash('What are some beginner friendly web projects to build?')">
+                🚀 Good beginner web projects for 1st year?
+              </button>
+              <button class="btn btn-secondary" style="justify-content: flex-start; text-align: left;" onclick="askQuickFromDash('How should I start learning GitHub repositories?')">
+                🐙 How to use Git and GitHub for college projects?
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 2: SKILL GAP ANALYZER
+           ========================================== -->
+      <section id="tab-analyzer" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">🎯 AI Career Skill Gap Analyzer</h3>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+            Select your dream tech role and enter your current skillset or paste your résumé summary. Campus Buddy compares requirements and builds your customized improvement roadmap.
+          </p>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+            <div class="form-group">
+              <label class="form-label" for="targetRoleSelect">Select Target Job Role</label>
+              <select class="form-control" id="targetRoleSelect" onchange="updateRoleBenchmarks()">
+                <option value="frontend">Frontend Web Developer (Junior / Intern)</option>
+                <option value="fullstack">Full Stack JavaScript Developer</option>
+                <option value="backend">Backend Python / Node Developer</option>
+                <option value="data">Data Analytics & Python Trainee</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="experienceSelect">Your Academic Year</label>
+              <select class="form-control" id="experienceSelect">
+                <option value="1">1st Year Engineering / BCA / BSc</option>
+                <option value="2">2nd Year Undergrad</option>
+                <option value="3">3rd / Final Year Student</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Your Current Known Skills (Comma Separated)</label>
+            <input type="text" class="form-control" id="userSkillsInput" value="HTML, CSS, Basic C, Problem Solving" placeholder="e.g. HTML, CSS, JavaScript, Git, Python">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Paste Résumé Highlights / Bio (Optional)</label>
+            <textarea class="form-control" id="resumeTextInput" rows="3" placeholder="Paste your résumé bullet points, hobbies, or college projects here..."></textarea>
+          </div>
+
+          <button class="btn btn-primary" onclick="performSkillGapAnalysis()">🔍 Run Skill Gap Analysis</button>
+        </div>
+
+        <!-- Analysis Results Output Area -->
+        <div id="analyzerResults" class="card" style="display:none;">
+          <div class="card-header">
+            <h3 class="card-title">📊 Analysis Report & Gap Breakdown</h3>
+            <span class="badge badge-primary" id="resRoleBadge">Frontend Developer</span>
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px;">
+              <span>Role Compatibility Score</span>
+              <span id="resScoreText">60%</span>
+            </div>
+            <div class="progress-bar-container" style="height: 12px;">
+              <div class="progress-bar-fill" id="resScoreBar" style="width: 60%;"></div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+            <div>
+              <h4 style="color: var(--success); margin-bottom: 10px;">✅ Skills You Have</h4>
+              <div id="resMatchedSkills" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+            </div>
+            <div>
+              <h4 style="color: var(--danger); margin-bottom: 10px;">⚠️ Missing Essential Skills (Gaps)</h4>
+              <div id="resMissingSkills" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+            </div>
+          </div>
+
+          <div style="margin-top: 24px; padding: 16px; background: var(--bg-base); border-radius: 8px; border-left: 4px solid var(--primary);">
+            <h4 style="font-size: 0.95rem; margin-bottom: 4px;">💡 AI Advisor Feedback</h4>
+            <p id="resFeedbackText" style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;"></p>
+          </div>
+
+          <div style="margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="switchTab('roadmap')">View Generated Roadmap →</button>
+            <button class="btn btn-secondary" onclick="switchTab('assessment')">Take Assessment Quiz ➔</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 3: SKILL QUIZ & ASSESSMENT
+           ========================================== -->
+      <section id="tab-assessment" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">📝 Skill Verification Assessment</h3>
+            <span class="badge badge-warning" id="quizRoleTag">Frontend Basics</span>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+            Test your knowledge to verify your skills. Re-taking this test after completing tasks continuously updates your readiness score!
+          </p>
+
+          <div id="quizContainer">
+            <!-- Questions rendered via JS -->
+          </div>
+
+          <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div id="quizStatusText" style="font-size: 0.9rem; font-weight: 600;">Question 1 of 5</div>
+            <button class="btn btn-primary" id="quizNextBtn" onclick="nextQuizQuestion()">Next Question →</button>
+          </div>
+        </div>
+
+        <div id="quizResultBox" class="card" style="display: none; text-align: center; padding: 36px 20px;">
+          <div style="font-size: 3rem; margin-bottom: 12px;">🎉</div>
+          <h3 style="font-size: 1.4rem; margin-bottom: 8px;">Assessment Completed!</h3>
+          <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 16px;">
+            You scored <strong id="quizFinalScore" style="color: var(--primary); font-size: 1.2rem;">4 / 5</strong> (<span id="quizScorePercent">80%</span>)
+          </p>
+          <div class="progress-bar-container" style="max-width: 400px; margin: 0 auto 20px auto; height: 10px;">
+            <div class="progress-bar-fill" id="quizFinalBar" style="width: 80%;"></div>
+          </div>
+          <p id="quizAdvice" style="font-size: 0.9rem; color: var(--text-muted); max-width: 600px; margin: 0 auto 24px auto;">
+            Great job! Your readiness score has been recorded and updated on your main dashboard.
+          </p>
+          <div style="display: flex; justify-content: center; gap: 12px;">
+            <button class="btn btn-secondary" onclick="restartQuiz()">🔄 Retake Quiz</button>
+            <button class="btn btn-primary" onclick="switchTab('practice')">Practice Hands-on Tasks →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 4: LEARNING ROADMAP
+           ========================================== -->
+      <section id="tab-roadmap" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">🗺️ Personalized Learning Roadmap</h3>
+            <span class="badge badge-primary" id="roadmapRoleLabel">Frontend Path</span>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+            Step-by-step curriculum customized to bridge your identified skill gaps. Complete milestones sequentially.
+          </p>
+
+          <div class="roadmap-timeline" id="roadmapTimelineList">
+            <!-- Populated via JavaScript -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 5: HANDS-ON TASKS & PROJECTS
+           ========================================== -->
+      <section id="tab-practice" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">💻 Practical Exercises & Mini-Projects</h3>
+            <button class="btn btn-secondary btn-sm" onclick="resetTasks()">Reset Checklist</button>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+            Real projects make your college résumé shine. Complete these beginner-friendly coding challenges to earn progress points!
+          </p>
+
+          <div id="tasksListContainer">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 6: CAMPUS BUDDY CHATBOT
+           ========================================== -->
+      <section id="tab-chatbot" class="tab-content">
+        <div class="chat-container">
+          <div class="chat-header">
+            <div class="chat-bot-info">
+              <div class="msg-avatar" style="background: var(--primary); color: white;">🤖</div>
+              <div>
+                <div style="font-weight: 700; font-size: 0.95rem;">Campus Buddy AI Bot</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); display:flex; align-items:center; gap: 4px;">
+                  <span class="bot-status"></span> Active • College Mentor
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="clearChat()">🗑️ Clear Chat</button>
+          </div>
+
+          <!-- Chat Messages Area -->
+          <div class="chat-messages" id="chatMessages">
+            <div class="message bot">
+              <div class="msg-avatar">CB</div>
+              <div class="msg-bubble">
+                👋 Hello! I'm your <strong>Campus Buddy</strong> mentor. As a 1st-year student, you might have questions about hackathons, GitHub, web development, beginner projects, or tech interviews. How can I guide you today?
+                <div class="msg-time">Just now</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Typing indicator -->
+          <div id="typingIndicator" class="typing-indicator" style="margin-left: 20px; margin-bottom: 10px;">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+
+          <!-- Quick chips -->
+          <div class="quick-prompts">
+            <span class="prompt-chip" onclick="sendQuickMessage('How do I participate in college hackathons?')">🏆 Hackathons Guide</span>
+            <span class="prompt-chip" onclick="sendQuickMessage('What is GitHub and how do I create a repository?')">🐙 GitHub for Beginners</span>
+            <span class="prompt-chip" onclick="sendQuickMessage('Suggest beginner web development projects')">🚀 Beginner Projects</span>
+            <span class="prompt-chip" onclick="sendQuickMessage('How to prepare a tech résumé for internships?')">📄 Résumé Tips</span>
+            <span class="prompt-chip" onclick="sendQuickMessage('Explain HTML, CSS and JavaScript simply')">🌐 HTML/CSS/JS Basics</span>
+          </div>
+
+          <!-- Input Bar -->
+          <div class="chat-input-bar">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Ask about hackathons, projects, skills, GitHub... (Press Enter to send)" onkeydown="handleChatKey(event)">
+            <button class="btn btn-primary" onclick="submitUserMessage()">Send ➔</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 7: MY PROFILE & RÉSUMÉ
+           ========================================== -->
+      <section id="tab-profile" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">👤 Student Profile & Résumé Details</h3>
+            <button class="btn btn-primary btn-sm" onclick="saveProfileData()">💾 Save Profile</button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-control" id="profileName" value="Alex Kumar">
+            </div>
+            <div class="form-group">
+              <label class="form-label">College / University</label>
+              <input type="text" class="form-control" id="profileCollege" value="Tech Institute of Science">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Branch & Degree</label>
+              <input type="text" class="form-control" id="profileBranch" value="B.Tech Computer Science & Engineering">
+            </div>
+            <div class="form-group">
+              <label class="form-label">GitHub Profile URL</label>
+              <input type="text" class="form-control" id="profileGithub" value="https://github.com/alexkumar-dev">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label class="form-label">Short Career Bio / Objectives</label>
+            <textarea class="form-control" id="profileBio" rows="3">Enthusiastic 1st-year computer science student passionate about frontend web development, open source, and building creative web apps.</textarea>
+          </div>
+
+          <div style="background: var(--bg-base); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 14px;">
+            <h4 style="font-size: 0.95rem; margin-bottom: 8px;">🎓 Pro-Tip for 1st Year Students:</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+              Keep your GitHub profile updated with every single mini-project you create. Recruiters and hackathon teammates love seeing consistency and willingness to learn!
+            </p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 1: SUPABASE AUTHENTICATION (LOGIN / REGISTER)
+       ========================================================================== -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size: 1.2rem; font-weight: 700; display:flex; align-items:center; gap: 8px;">
+          <span>🔐</span> <span id="authModalHeading">Student Login</span>
+        </h3>
+        <button class="modal-close" onclick="closeAuthModal()">✕</button>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab-btn active" id="tabLoginBtn" onclick="switchAuthMode('login')">Sign In</button>
+        <button class="auth-tab-btn" id="tabRegisterBtn" onclick="switchAuthMode('register')">Create Account</button>
+      </div>
+
+      <div id="authNotice" style="display:none; padding:10px; border-radius:6px; margin-bottom:14px; font-size:0.85rem;"></div>
+
+      <form onsubmit="handleAuthSubmit(event)">
+        <div class="form-group" id="nameGroup" style="display: none;">
+          <label class="form-label" for="authFullName">Full Name</label>
+          <input type="text" class="form-control" id="authFullName" placeholder="e.g. Alex Kumar">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="authEmail">Student Email</label>
+          <input type="email" class="form-control" id="authEmail" required placeholder="name@college.edu">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="authPassword">Password</label>
+          <input type="password" class="form-control" id="authPassword" required minlength="6" placeholder="At least 6 characters">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="authSubmitBtn" style="width: 100%; justify-content: center; margin-top: 6px;">
+          Sign In ➔
+        </button>
+      </form>
+
+      <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; font-size: 0.82rem;">
+        <span style="color: var(--text-muted);">Supabase Cloud Auth</span>
+        <a href="javascript:void(0)" onclick="openConfigModal(); closeAuthModal();" style="color: var(--primary); text-decoration:none; font-weight:600;">Edit Supabase Keys ⚙️</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 2: SUPABASE CREDENTIALS CONFIGURATION
+       ========================================================================== -->
+  <div class="modal-overlay" id="configModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size: 1.2rem; font-weight: 700; display:flex; align-items:center; gap: 8px;">
+          <span>⚙️</span> Supabase Credentials
+        </h3>
+        <button class="modal-close" onclick="closeConfigModal()">✕</button>
+      </div>
+
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.4;">
+        Connect your project directly to your free Supabase database. You can find these in your <strong>Supabase Dashboard &gt; Project Settings &gt; API</strong>.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label" for="supabaseUrlInput">Project URL</label>
+        <input type="url" class="form-control" id="supabaseUrlInput" placeholder="https://your-project.supabase.co">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="supabaseKeyInput">Anon Public Key (API Key)</label>
+        <input type="password" class="form-control" id="supabaseKeyInput" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+      </div>
+
+      <div style="display:flex; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="saveSupabaseCredentials()">Save &amp; Connect</button>
+        <button class="btn btn-secondary" onclick="clearSupabaseCredentials()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       JAVASCRIPT: APPLICATION LOGIC
+       ========================================================================== -->
+  <script>
+    /* ==========================================================================
+       1. GLOBAL STATE & DATA STORAGE
+       All state is stored in localStorage so work is saved across browser refreshes!
+       ========================================================================== */
+    const appState = {
+      theme: localStorage.getItem('cb_theme') || 'light',
+      studentName: localStorage.getItem('cb_name') || 'Alex Kumar',
+      targetRole: 'frontend',
+      overallReadiness: 65,
+      tasksDoneCount: 4,
+      totalTasks: 6,
+      streakDays: 5,
+      latestQuizScore: 80,
+      
+      // Known job role benchmark requirements
+      roleBenchmarks: {
+        frontend: {
+          title: "Frontend Web Developer",
+          requiredSkills: ["HTML", "CSS", "JavaScript", "Responsive Design", "Git", "DOM Manipulation", "Fetch API"],
+          description: "Builds user-facing web applications with interactive UI and modern CSS.",
+          quiz: [
+            {
+              q: "Which HTML tag is used to create an interactive click button?",
+              options: ["<click>", "<button>", "<btn>", "<action>"],
+              correct: 1
+            },
+            {
+              q: "Which CSS property is used to create responsive flexbox layouts?",
+              options: ["float: left", "display: flex", "position: fixed", "layout: flex"],
+              correct: 1
+            },
+            {
+              q: "In vanilla JavaScript, how do you select an element with id='app'?",
+              options: ["document.select('#app')", "document.getElementById('app')", "select('#app')", "window.getElement('app')"],
+              correct: 1
+            },
+            {
+              q: "What does Git command 'git push' do?",
+              options: ["Deletes local repository", "Uploads local commits to remote repository", "Downloads new code", "Initializes empty git"],
+              correct: 1
+            },
+            {
+              q: "Which JavaScript function converts a JSON string into a JS object?",
+              options: ["JSON.stringify()", "JSON.parse()", "Object.fromJSON()", "JSON.toObject()"],
+              correct: 1
+            }
+          ],
+          roadmap: [
+            { step: 1, title: "Web Core Foundations", desc: "Semantic HTML5, CSS Flexbox/Grid, Box Model, and Clean Layouts." },
+            { step: 2, title: "Modern JavaScript (ES6+)", desc: "Variables (let/const), Arrow Functions, DOM events, and Array methods." },
+            { step: 3, title: "Version Control with Git & GitHub", desc: "Initializing repos, branching, staging, committing, and GitHub Pages hosting." },
+            { step: 4, title: "Asynchronous JS & APIs", desc: "Understanding Promises, Fetch API, and displaying live data from free APIs." },
+            { step: 5, title: "Portfolio Capstone Project", desc: "Complete responsive dashboard or tool with local storage persistence." }
+          ],
+          tasks: [
+            { id: 1, title: "Build a Responsive Personal Landing Page", completed: true },
+            { id: 2, title: "Create an Interactive To-Do List with LocalStorage", completed: true },
+            { id: 3, title: "Push your project to GitHub and publish on GitHub Pages", completed: true },
+            { id: 4, title: "Build a Weather App using the free Open-Meteo API", completed: true },
+            { id: 5, title: "Create a Dark/Light Mode Theme Switcher with CSS variables", completed: false },
+            { id: 6, title: "Build a Form Validator with custom JavaScript error alerts", completed: false }
+          ]
+        },
+        fullstack: {
+          title: "Full Stack JavaScript Developer",
+          requiredSkills: ["HTML", "CSS", "JavaScript", "Node.js", "Express", "MongoDB", "REST APIs", "Git"],
+          description: "Handles both client frontend and server backend logic with database storage.",
+          quiz: [
+            {
+              q: "What runtime allows JavaScript to run on the server?",
+              options: ["Python", "Node.js", "Apache", "Babel"],
+              correct: 1
+            },
+            {
+              q: "Which HTTP method is commonly used to create new data in a REST API?",
+              options: ["GET", "POST", "DELETE", "FETCH"],
+              correct: 1
+            },
+            {
+              q: "What format is commonly used to exchange data between client and server?",
+              options: ["XML only", "JSON", "TXT", "Binary"],
+              correct: 1
+            },
+            {
+              q: "What is Express.js in the JavaScript ecosystem?",
+              options: ["A browser engine", "A fast backend web framework for Node.js", "A CSS library", "A database"],
+              correct: 1
+            },
+            {
+              q: "What does CRUD stand for in database systems?",
+              options: ["Create, Read, Update, Delete", "Compile, Run, Undo, Debug", "Code, Review, Use, Deploy", "Call, Receive, Understand, Deliver"],
+              correct: 0
+            }
+          ],
+          roadmap: [
+            { step: 1, title: "Frontend Solidification", desc: "Master JavaScript DOM and asynchronous fetch handling." },
+            { step: 2, title: "Node.js Basics", desc: "Understanding event loop, modules, npm package management." },
+            { step: 3, title: "Building REST APIs with Express", desc: "Routing, request/response cycle, middleware, and CORS." },
+            { step: 4, title: "Database Integration", desc: "Connecting MongoDB or SQLite to store users and records." },
+            { step: 5, title: "Full Stack Deployment", desc: "Connecting client UI with server and deploying to free hosting." }
+          ],
+          tasks: [
+            { id: 1, title: "Create an Express hello-world server with custom routes", completed: true },
+            { id: 2, title: "Build a REST API endpoint that returns JSON items", completed: true },
+            { id: 3, title: "Connect front-end fetch() to your local Express server", completed: false },
+            { id: 4, title: "Implement a SQLite / MongoDB schema for student notes", completed: false },
+            { id: 5, title: "Add basic User Login with password hashing", completed: false }
+          ]
+        },
+        backend: {
+          title: "Backend Python / Node Developer",
+          requiredSkills: ["Python", "SQL", "REST APIs", "Data Structures", "Git", "Authentication"],
+          description: "Focuses on application architecture, database queries, and secure API servers.",
+          quiz: [
+            {
+              q: "Which SQL clause is used to filter records?",
+              options: ["ORDER BY", "WHERE", "GROUP BY", "SELECT"],
+              correct: 1
+            },
+            {
+              q: "In Python, which built-in data type stores key-value pairs?",
+              options: ["List", "Dictionary", "Tuple", "Set"],
+              correct: 1
+            },
+            {
+              q: "What status code indicates a successful HTTP request?",
+              options: ["404", "200", "500", "301"],
+              correct: 1
+            },
+            {
+              q: "What is hashing commonly used for in user authentication?",
+              options: ["Compressing images", "Storing passwords securely", "Speeding up internet", "Styling forms"],
+              correct: 1
+            },
+            {
+              q: "Which Git command lets you switch between different branches?",
+              options: ["git checkout / git switch", "git push", "git clone", "git commit"],
+              correct: 0
+            }
+          ],
+          roadmap: [
+            { step: 1, title: "Python or Node Fundamentals", desc: "Object-oriented programming, data structures, and file I/O." },
+            { step: 2, title: "Relational Databases & SQL", desc: "Tables, primary/foreign keys, joins, and indexing." },
+            { step: 3, title: "RESTful API Development", desc: "Designing clean endpoints, validation, and error handling." },
+            { step: 4, title: "Authentication & Security", desc: "JWT tokens, sessions, password hashing with bcrypt." },
+            { step: 5, title: "Backend Testing & Docs", desc: "Writing unit tests and API documentation." }
+          ],
+          tasks: [
+            { id: 1, title: "Write a Python script to parse a CSV file into JSON", completed: true },
+            { id: 2, title: "Design a database schema for a college library", completed: true },
+            { id: 3, title: "Build a CRUD API using Flask or Express", completed: false },
+            { id: 4, title: "Implement JWT token login flow", completed: false },
+            { id: 5, title: "Write 3 unit tests for your API endpoints", completed: false }
+          ]
+        },
+        data: {
+          title: "Data Analytics & Python Trainee",
+          requiredSkills: ["Python", "Pandas", "NumPy", "Data Visualization", "SQL", "Statistics Basics"],
+          description: "Extracts insights from datasets and presents visual metrics for decisions.",
+          quiz: [
+            {
+              q: "Which Python library is the standard for tabular data manipulation?",
+              options: ["Django", "Pandas", "Flask", "React"],
+              correct: 1
+            },
+            {
+              q: "Which visualization is best suited for showing distributions of values?",
+              options: ["Histogram", "Pie Chart", "Bullet list", "Word cloud"],
+              correct: 0
+            },
+            {
+              q: "What does the SQL AVG() function compute?",
+              options: ["The highest number", "The mathematical average / mean", "The total count", "The median"],
+              correct: 1
+            },
+            {
+              q: "In statistics, what is the 'median'?",
+              options: ["The most frequent value", "The middle value in an ordered set", "The sum of all values", "The range"],
+              correct: 1
+            },
+            {
+              q: "Which file format is most universally used for tabular data exchange?",
+              options: ["CSV", "EXE", "MP4", "HTML"],
+              correct: 0
+            }
+          ],
+          roadmap: [
+            { step: 1, title: "Python Programming & Logic", desc: "Lists, loops, functions, and working with external files." },
+            { step: 2, title: "NumPy & Pandas Mastery", desc: "Dataframes, cleaning missing values, grouping, and filtering." },
+            { step: 3, title: "Data Visualization", desc: "Chart design using Matplotlib / Seaborn or web chart libraries." },
+            { step: 4, title: "SQL for Data Analysis", desc: "Complex queries, window functions, and aggregations." },
+            { step: 5, title: "Real-World Exploratory Data Analysis (EDA)", desc: "Analyzing student grades or weather trends end-to-end." }
+          ],
+          tasks: [
+            { id: 1, title: "Load a Kaggle dataset using Python & print summary stats", completed: true },
+            { id: 2, title: "Clean a dataset by handling null/missing rows", completed: true },
+            { id: 3, title: "Plot a bar chart and scatter plot showing correlations", completed: false },
+            { id: 4, title: "Write SQL queries to find top 5 performing departments", completed: false },
+            { id: 5, title: "Publish your Jupyter notebook or summary on GitHub", completed: false }
+          ]
+        }
+      }
+    };
+
+    /* ==========================================================================
+       2. TAB NAVIGATION & THEME TOGGLE
+       ========================================================================== */
+    function switchTab(tabId) {
+      // Deactivate all nav items & sections
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+
+      // Activate selected section
+      const targetSection = document.getElementById('tab-' + tabId);
+      if (targetSection) {
+        targetSection.classList.add('active');
+      }
+
+      // Highlight sidebar item
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(item => {
+        if (item.getAttribute('onclick')?.includes(tabId)) {
+          item.classList.add('active');
+        }
+      });
+
+      // Update Topbar Title
+      const titles = {
+        dashboard: "📊 Dashboard Overview",
+        analyzer: "🎯 Skill Gap Analyzer",
+        assessment: "📝 Skill Quiz & Assessment",
+        roadmap: "🗺️ Learning Roadmap",
+        practice: "💻 Hands-on Practice Tasks",
+        chatbot: "🤖 AI Campus Chatbot",
+        profile: "👤 Student Profile & Résumé"
+      };
+      document.getElementById('pageTitle').textContent = titles[tabId] || "Campus Buddy";
+
+      // On mobile, close sidebar after clicking
+      if (window.innerWidth <= 900) {
+        document.getElementById('sidebar').classList.remove('open');
+      }
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const nextTheme = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      localStorage.setItem('cb_theme', nextTheme);
+      document.getElementById('themeToggleBtn').textContent = nextTheme === 'dark' ? '☀️' : '🌙';
+    }
+
+    // Initialize Theme on startup
+    if (appState.theme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.getElementById('themeToggleBtn').textContent = '☀️';
+    }
+
+    /* ==========================================================================
+       3. SKILL GAP ANALYZER ENGINE
+       Compares student's input skills vs benchmark requirements.
+       ========================================================================== */
+    function updateRoleBenchmarks() {
+      const roleKey = document.getElementById('targetRoleSelect').value;
+      appState.targetRole = roleKey;
+      renderRoadmap();
+      renderTasks();
+      initQuiz();
+    }
+
+    function performSkillGapAnalysis() {
+      const roleKey = document.getElementById('targetRoleSelect').value;
+      const roleData = appState.roleBenchmarks[roleKey];
+      const rawInput = document.getElementById('userSkillsInput').value.toLowerCase();
+      const resumeText = document.getElementById('resumeTextInput').value.toLowerCase();
+
+      // Normalize user skills list
+      const userSkills = rawInput.split(',').map(s => s.trim()).filter(Boolean);
+
+      const matched = [];
+      const missing = [];
+
+      roleData.requiredSkills.forEach(reqSkill => {
+        const lowerReq = reqSkill.toLowerCase();
+        // Check if keyword exists in skills input or resume text
+        const hasSkill = userSkills.some(s => s.includes(lowerReq) || lowerReq.includes(s)) ||
+                         resumeText.includes(lowerReq);
+
+        if (hasSkill) {
+          matched.push(reqSkill);
+        } else {
+          missing.push(reqSkill);
+        }
+      });
+
+      // Compute compatibility percentage
+      const totalReq = roleData.requiredSkills.length;
+      const matchScore = Math.round((matched.length / totalReq) * 100);
+      appState.overallReadiness = matchScore;
+
+      // Update UI elements
+      document.getElementById('resRoleBadge').textContent = roleData.title;
+      document.getElementById('resScoreText').textContent = matchScore + "%";
+      document.getElementById('resScoreBar').style.width = matchScore + "%";
+
+      // Populate Matched Skills Badges
+      const matchedContainer = document.getElementById('resMatchedSkills');
+      matchedContainer.innerHTML = matched.length
+        ? matched.map(s => `<span class="badge badge-success">✓ ${s}</span>`).join('')
+        : `<span style="font-size:0.85rem; color:var(--text-muted);">None detected yet. Don't worry, everyone starts here!</span>`;
+
+      // Populate Missing Skills Badges
+      const missingContainer = document.getElementById('resMissingSkills');
+      missingContainer.innerHTML = missing.length
+        ? missing.map(s => `<span class="badge badge-danger">✗ ${s}</span>`).join('')
+        : `<span class="badge badge-success">🎉 Excellent! You cover all baseline skills!</span>`;
+
+      // Generate AI Advice
+      let feedback = "";
+      if (matchScore >= 80) {
+        feedback = `Outstanding foundation for a first-year student! You're ready to build capstone projects and start preparing for hackathons or internship applications.`;
+      } else if (matchScore >= 50) {
+        feedback = `Good progress! You have core building blocks like ${matched.slice(0, 2).join(', ')}. Focus on closing gaps in ${missing.slice(0, 2).join(' and ')} via our step-by-step roadmap.`;
+      } else {
+        feedback = `You are at the ideal starting point! As a 1st year beginner, dedicating 30-45 minutes daily to our recommended practice tasks will rapidly build your skillset.`;
+      }
+      document.getElementById('resFeedbackText').textContent = feedback;
+
+      // Show results card
+      document.getElementById('analyzerResults').style.display = 'block';
+
+      // Update dashboard values
+      updateDashboardStats();
+    }
+
+    function updateDashboardStats() {
+      const roleData = appState.roleBenchmarks[appState.targetRole];
+      document.getElementById('statMatchRate').textContent = appState.overallReadiness + "%";
+      document.getElementById('dashRoleTitle').textContent = roleData.title;
+      document.getElementById('dashMatchPercent').textContent = appState.overallReadiness + "%";
+      document.getElementById('dashMatchBar').style.width = appState.overallReadiness + "%";
+
+      // Update task count
+      const doneCount = roleData.tasks.filter(t => t.completed).length;
+      document.getElementById('statTasksDone').textContent = `${doneCount} / ${roleData.tasks.length}`;
+      document.getElementById('statQuizScore').textContent = appState.latestQuizScore + "%";
+    }
+
+    /* ==========================================================================
+       4. ASSESSMENT & QUIZ ENGINE
+       ========================================================================== */
+    let currentQuizIndex = 0;
+    let quizSelectedAnswers = {};
+
+    function initQuiz() {
+      currentQuizIndex = 0;
+      quizSelectedAnswers = {};
+      const roleData = appState.roleBenchmarks[appState.targetRole];
+      document.getElementById('quizRoleTag').textContent = roleData.title;
+      document.getElementById('quizResultBox').style.display = 'none';
+      document.getElementById('quizContainer').style.display = 'block';
+      document.getElementById('quizNextBtn').style.display = 'inline-block';
+      renderCurrentQuizQuestion();
+    }
+
+    function renderCurrentQuizQuestion() {
+      const roleData = appState.roleBenchmarks[appState.targetRole];
+      const questions = roleData.quiz;
+      const q = questions[currentQuizIndex];
+
+      document.getElementById('quizStatusText').textContent = `Question ${currentQuizIndex + 1} of ${questions.length}`;
+      document.getElementById('quizNextBtn').textContent = (currentQuizIndex === questions.length - 1) ? "Submit Assessment ✓" : "Next Question →";
+
+      let html = `
+        <div style="margin-bottom: 18px;">
+          <h4 style="font-size: 1.05rem; margin-bottom: 14px;">${currentQuizIndex + 1}. ${q.q}</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+      `;
+
+      q.options.forEach((opt, idx) => {
+        const isSelected = quizSelectedAnswers[currentQuizIndex] === idx ? 'selected' : '';
+        html += `
+          <div class="quiz-option ${isSelected}" onclick="chooseQuizOption(${idx})">
+            <span style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border-color); display:flex; align-items:center; justify-content:center; font-size: 0.8rem; font-weight:bold;">${String.fromCharCode(65 + idx)}</span>
+            <span>${opt}</span>
+          </div>
+        `;
+      });
+
+      html += `</div></div>`;
+      document.getElementById('quizContainer').innerHTML = html;
+    }
+
+    function chooseQuizOption(idx) {
+      quizSelectedAnswers[currentQuizIndex] = idx;
+      renderCurrentQuizQuestion();
+    }
+
+    function nextQuizQuestion() {
+      const roleData = appState.roleBenchmarks[appState.targetRole];
+      const questions = roleData.quiz;
+
+      if (quizSelectedAnswers[currentQuizIndex] === undefined) {
+        alert("Please pick an option to continue!");
+        return;
+      }
+
+      if (currentQuizIndex < questions.length - 1) {
+        currentQuizIndex++;
+        renderCurrentQuizQuestion();
+      } else {
+        // Grade Quiz
+        let score = 0;
+        questions.forEach((q, i) => {
+          if (quizSelectedAnswers[i] === q.correct) {
+            score++;
+          }
+        });
+
+        const percent = Math.round((score / questions.length) * 100);
+        appState.latestQuizScore = percent;
+
+        // Continuous Loop: boost readiness if quiz score is high!
+        if (percent > 60) {
+          appState.overallReadiness = Math.min(100, appState.overallReadiness + 5);
+        }
+
+        // Show Results
+        document.getElementById('quizContainer').style.display = 'none';
+        document.getElementById('quizNextBtn').style.display = 'none';
+        document.getElementById('quizResultBox').style.display = 'block';
+
+        document.getElementById('quizFinalScore').textContent = `${score} / ${questions.length}`;
+        document.getElementById('quizScorePercent').textContent = `${percent}%`;
+        document.getElementById('quizFinalBar').style.width = `${percent}%`;
+
+        updateDashboardStats();
+      }
+    }
+
+    function restartQuiz() {
+      initQuiz();
+    }
+
+    /* ==========================================================================
+       5. ROADMAP & PRACTICE TASKS
+       ========================================================================== */
+    function renderRoadmap() {
+      const roleData = appState.roleBenchmarks[appState.targetRole];
+      document.getElementById('roadmapRoleLabel').textContent = roleData.title;
+
+      const container = document.getElementById('roadmapTimelineList');
+      container.innerHTML = roleData.roadmap.map((item, idx) => `
+        <div class="timeline-item">
+          <div class="timeline-dot ${idx < 2 ? 'done' : ''}"></div>
+          <h4 style="font-size: 1rem; margin-bottom: 4px;">Milestone ${item.step}: ${item.title}</h4>
+          <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.4;">${item.desc}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderTasks() {
+      const roleData = appState.roleBenchmarks[appState.targetRole];
+      const container = document.getElementById('tasksListContainer');
+
+      container.innerHTML = roleData.tasks.map(task => `
+        <div class="task-item">
+          <div style="display:flex; align-items:center; gap: 12px;">
+            <input type="checkbox" style="width: 18px; height: 18px; cursor:pointer;" 
+                   ${task.completed ? 'checked' : ''} 
+                   onchange="toggleTaskDone(${task.id})">
+            <span style="font-size: 0.92rem; ${task.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
+              ${task.title}
+            </span>
+          </div>
+          <span class="badge ${task.completed ? 'badge-success' : 'badge-warning'}">
+            ${task.completed ? 'Completed' : 'Pending'}
+          </span>
+        </div>
+      `).join('');
+
+      updateDashboardStats();
+    }
+
+    function toggleTaskDone(taskId) {
+      const roleData = appState.roleBenchmarks[appState.targetRole];
+      const task = roleData.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.completed = !task.completed;
+        renderTasks();
+      }
+    }
+
+    function resetTasks() {
+      if (confirm("Reset all task completions for this role?")) {
+        const roleData = appState.roleBenchmarks[appState.targetRole];
+        roleData.tasks.forEach(t => t.completed = false);
+        renderTasks();
+      }
+    }
+
+    /* ==========================================================================
+       6. INTERACTIVE CAMPUS BUDDY CHATBOT (Keyword Matching Engine)
+       ========================================================================== */
+    const botKnowledge = [
+      {
+        keywords: ["hackathon", "hackathons", "hack", "participate", "competition"],
+        reply: "🏆 <strong>College Hackathon Guide for Beginners:</strong><br><br>1. <strong>Don't wait to be an expert:</strong> Hackathons are for learning! Even with basic HTML/CSS you can design presentations and prototypes.<br>2. <strong>Find teammates:</strong> Form a 3-4 person team with friends. One on UI, one on logic, one on presenting.<br>3. <strong>Where to find them:</strong> Check platforms like Devpost, Unstop, and your college tech clubs.<br>4. <strong>Tip:</strong> Pick a simple, real-life campus problem (e.g., lost & found, mess food feedback, campus buddy!). Judges value working prototypes and clear presentations."
+      },
+      {
+        keywords: ["github", "git", "repository", "repo", "commit", "push"],
+        reply: "🐙 <strong>GitHub & Version Control 101:</strong><br><br>• <strong>What is it?</strong> Git tracks changes in your code like checkpoints in a game. GitHub hosts your code online so others can see it.<br>• <strong>3-Step Daily Workflow:</strong><br><code>1. git add .</code> (stage files)<br><code>2. git commit -m 'Added cool navbar'</code> (save snapshot)<br><code>3. git push origin main</code> (upload to GitHub)<br>• <strong>Pro-Tip:</strong> Host your web projects for free using <em>GitHub Pages</em> directly in repository settings!"
+      },
+      {
+        keywords: ["html", "css", "javascript", "js", "web dev", "frontend"],
+        reply: "🌐 <strong>HTML, CSS & JavaScript Breakdown:</strong><br><br>• <strong>HTML (The Skeleton):</strong> Defines structure with headings, paragraphs, buttons, and inputs.<br>• <strong>CSS (The Clothes & Style):</strong> Colors, layouts, fonts, animations, and dark/light modes.<br>• <strong>JavaScript (The Brain):</strong> Makes pages interactive! Clicking buttons, calculating scores, fetching live APIs, and running chatbots.<br><em>Beginner advice:</em> Build 3 small apps in pure vanilla HTML/CSS/JS before jumping into React or Angular."
+      },
+      {
+        keywords: ["project", "projects", "beginner projects", "ideas", "build"],
+        reply: "🚀 <strong>Top 5 Beginner College Projects:</strong><br><br>1. <strong>Personal Portfolio / Link-in-Bio:</strong> Showcase your bio, social links, and skills.<br>2. <strong>Student Attendance / CGPA Calculator:</strong> A practical tool every student in your class will use.<br>3. <strong>Interactive Flashcard Quiz App:</strong> Practice quiz questions with instant score calculations.<br>4. <strong>Campus Lost & Found Board:</strong> Post and filter lost items locally using browser storage.<br>5. <strong>Campus Buddy (This exact app!):</strong> Analyzes skills and tracks learning roadmaps!"
+      },
+      {
+        keywords: ["resume", "résumé", "interview", "placement", "internship", "cv"],
+        reply: "📄 <strong>Tech Résumé & Interview Preparation:</strong><br><br>• <strong>Keep it to 1 Page:</strong> Recruiters spend only 6-10 seconds scanning.<br>• <strong>Add Live Links:</strong> Always include GitHub repository links and working live demos.<br>• <strong>Use Action Verbs:</strong> Instead of 'worked on website', write 'Built responsive dashboard in vanilla JS used by 50+ students'.<br>• <strong>College Freshers Tip:</strong> Emphasize coursework, problem solving, hackathons, and personal projects."
+      },
+      {
+        keywords: ["roadmap", "gap", "assessment", "score", "career", "role"],
+        reply: "🗺️ <strong>Campus Buddy Skill Loop:</strong><br><br>1. Go to the <strong>Skill Gap Analyzer</strong> tab to compare your knowledge with role benchmarks.<br>2. Check your <strong>Learning Roadmap</strong> for clear milestone steps.<br>3. Test your skills in the <strong>Skill Quiz</strong> tab. Retaking it helps measure real growth!"
+      },
+      {
+        keywords: ["hi", "hello", "hey", "sup", "greeting"],
+        reply: "👋 Hello there! I am your <strong>Campus Buddy</strong> AI companion. What college coding questions can I help you with today? (Try asking about hackathons, projects, Git, or internships!)"
+      }
+    ];
+
+    function handleChatKey(event) {
+      if (event.key === 'Enter') {
+        submitUserMessage();
+      }
+    }
+
+    function sendQuickMessage(text) {
+      document.getElementById('chatInput').value = text;
+      submitUserMessage();
+    }
+
+    function askQuickFromDash(questionText) {
+      switchTab('chatbot');
+      document.getElementById('chatInput').value = questionText;
+      submitUserMessage();
+    }
+
+    function submitUserMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      // Append User Message bubble
+      appendChatMessage(text, 'user');
+      input.value = '';
+
+      // Show typing indicator
+      const indicator = document.getElementById('typingIndicator');
+      indicator.style.display = 'flex';
+
+      // Auto scroll down
+      const chatMessages = document.getElementById('chatMessages');
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      // Simulate natural typing delay (400ms)
+      setTimeout(() => {
+        indicator.style.display = 'none';
+        const botReply = generateBotResponse(text);
+        appendChatMessage(botReply, 'bot');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }, 450);
+    }
+
+    function appendChatMessage(htmlContent, sender) {
+      const chatMessages = document.getElementById('chatMessages');
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${sender}`;
+
+      const avatarLabel = sender === 'user' ? 'ST' : 'CB';
+
+      msgDiv.innerHTML = `
+        <div class="msg-avatar">${avatarLabel}</div>
+        <div class="msg-bubble">
+          ${htmlContent}
+          <div class="msg-time">${timeStr}</div>
+        </div>
+      `;
+
+      chatMessages.appendChild(msgDiv);
+    }
+
+    function generateBotResponse(query) {
+      const lower = query.toLowerCase();
+
+      for (let item of botKnowledge) {
+        const matches = item.keywords.some(k => lower.includes(k));
+        if (matches) {
+          return item.reply;
+        }
+      }
+
+      // Default friendly response
+      return `💡 That's a great question! While I'm specialized in college prep, you can try asking about:
+      <br>• <strong>Hackathons</strong> (how to register & participate)
+      <br>• <strong>GitHub</strong> (git commands and hosting)
+      <br>• <strong>Projects</strong> (beginner-friendly college web ideas)
+      <br>• <strong>Web Dev</strong> (HTML, CSS, JavaScript tips)
+      <br>• <strong>Résumés & Internships</strong>`;
+    }
+
+    function clearChat() {
+      if (confirm("Clear conversation history?")) {
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.innerHTML = `
+          <div class="message bot">
+            <div class="msg-avatar">CB</div>
+            <div class="msg-bubble">
+              Chat history cleared. How can I assist you with your campus learning today?
+              <div class="msg-time">Just now</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    /* ==========================================================================
+       7. PROFILE MANAGEMENT
+       ========================================================================== */
+    function saveProfileData() {
+      const name = document.getElementById('profileName').value.trim();
+      if (name) {
+        appState.studentName = name;
+        localStorage.setItem('cb_name', name);
+        document.getElementById('sidebarStudentName').textContent = name;
+        
+        // Update initials
+        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        document.getElementById('sidebarAvatar').textContent = initials;
+      }
+      alert("✅ Profile details updated successfully!");
+    }
+
+    /* ==========================================================================
+       9. SUPABASE AUTHENTICATION & CREDENTIALS MANAGEMENT
+       ========================================================================== */
+    let supabaseClient = null;
+    let authMode = 'login'; // 'login' or 'register'
+    let currentUser = null;
+
+    // Load credentials stored in localStorage if any
+    const DEFAULT_SUPABASE_URL = localStorage.getItem('cb_sb_url') || '';
+    const DEFAULT_SUPABASE_KEY = localStorage.getItem('cb_sb_key') || '';
+
+    function initSupabase() {
+      const url = localStorage.getItem('cb_sb_url') || '';
+      const key = localStorage.getItem('cb_sb_key') || '';
+
+      if (url && key && window.supabase) {
+        try {
+          supabaseClient = window.supabase.createClient(url, key);
+          checkUserSession();
+          updateAuthUI(true);
+        } catch (err) {
+          console.warn("Could not initialize Supabase client:", err);
+          updateAuthUI(false);
+        }
+      } else {
+        updateAuthUI(false);
+      }
+    }
+
+    async function checkUserSession() {
+      if (!supabaseClient) return;
+      try {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        if (session && session.user) {
+          setCurrentUser(session.user);
+        } else {
+          setCurrentUser(null);
+        }
+
+        // Listen for auth state changes
+        supabaseClient.auth.onAuthStateChange((_event, session) => {
+          if (session?.user) {
+            setCurrentUser(session.user);
+          } else {
+            setCurrentUser(null);
+          }
+        });
+      } catch (e) {
+        console.error("Session check error:", e);
+      }
+    }
+
+    function setCurrentUser(user) {
+      currentUser = user;
+      const topbarBadge = document.getElementById('topbarAuthBadge');
+      const topbarAuthBtn = document.getElementById('topbarAuthBtn');
+      const sidebarAuthBtn = document.getElementById('sidebarAuthBtn');
+      const sidebarRole = document.getElementById('sidebarUserStatus');
+      const sidebarName = document.getElementById('sidebarStudentName');
+      const sidebarAvatar = document.getElementById('sidebarAvatar');
+
+      if (user) {
+        const displayName = user.user_metadata?.full_name || user.email.split('@')[0];
+        topbarBadge.className = "auth-status-chip";
+        topbarBadge.innerHTML = `🟢 ${user.email}`;
+        topbarAuthBtn.innerHTML = `🚪 Sign Out`;
+        topbarAuthBtn.onclick = handleSignOut;
+        
+        sidebarAuthBtn.innerHTML = `Sign Out`;
+        sidebarAuthBtn.onclick = handleSignOut;
+        sidebarRole.textContent = "Supabase User";
+        sidebarName.textContent = displayName;
+        sidebarAvatar.textContent = displayName.substring(0, 2).toUpperCase();
+      } else {
+        topbarBadge.className = "auth-status-chip guest";
+        topbarBadge.innerHTML = `⚡ Local Mode`;
+        topbarAuthBtn.innerHTML = `🔐 Supabase Login`;
+        topbarAuthBtn.onclick = openAuthModal;
+
+        sidebarAuthBtn.innerHTML = `🔐 Login`;
+        sidebarAuthBtn.onclick = openAuthModal;
+        sidebarRole.textContent = "Guest Student";
+      }
+    }
+
+    function openAuthModal() {
+      const url = localStorage.getItem('cb_sb_url');
+      const key = localStorage.getItem('cb_sb_key');
+      if (!url || !key) {
+        // Direct to config modal first if no credentials configured yet
+        openConfigModal();
+        return;
+      }
+      document.getElementById('authModal').classList.add('active');
+      hideAuthNotice();
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.remove('active');
+    }
+
+    function openConfigModal() {
+      document.getElementById('supabaseUrlInput').value = localStorage.getItem('cb_sb_url') || '';
+      document.getElementById('supabaseKeyInput').value = localStorage.getItem('cb_sb_key') || '';
+      document.getElementById('configModal').classList.add('active');
+    }
+
+    function closeConfigModal() {
+      document.getElementById('configModal').classList.remove('active');
+    }
+
+    function switchAuthMode(mode) {
+      authMode = mode;
+      hideAuthNotice();
+      const tabLogin = document.getElementById('tabLoginBtn');
+      const tabReg = document.getElementById('tabRegisterBtn');
+      const nameGroup = document.getElementById('nameGroup');
+      const heading = document.getElementById('authModalHeading');
+      const submitBtn = document.getElementById('authSubmitBtn');
+
+      if (mode === 'register') {
+        tabLogin.classList.remove('active');
+        tabReg.classList.add('active');
+        nameGroup.style.display = 'block';
+        heading.textContent = 'Create Student Account';
+        submitBtn.textContent = 'Register Account ➔';
+      } else {
+        tabReg.classList.remove('active');
+        tabLogin.classList.add('active');
+        nameGroup.style.display = 'none';
+        heading.textContent = 'Student Login';
+        submitBtn.textContent = 'Sign In ➔';
+      }
+    }
+
+    function showAuthNotice(message, isError = false) {
+      const el = document.getElementById('authNotice');
+      el.style.display = 'block';
+      el.style.background = isError ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+      el.style.color = isError ? 'var(--danger)' : 'var(--success)';
+      el.style.border = `1px solid ${isError ? 'var(--danger)' : 'var(--success)'}`;
+      el.textContent = message;
+    }
+
+    function hideAuthNotice() {
+      const el = document.getElementById('authNotice');
+      el.style.display = 'none';
+    }
+
+    async function handleAuthSubmit(event) {
+      event.preventDefault();
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const fullName = document.getElementById('authFullName').value.trim();
+
+      if (!supabaseClient) {
+        showAuthNotice("Please enter and save your Supabase URL & Anon Key first!", true);
+        return;
+      }
+
+      const submitBtn = document.getElementById('authSubmitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Processing...';
+
+      try {
+        if (authMode === 'register') {
+          const { data, error } = await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { full_name: fullName || 'Student' }
+            }
+          });
+
+          if (error) throw error;
+
+          if (data.user && data.session) {
+            showAuthNotice("Account created & logged in successfully!");
+            setTimeout(() => closeAuthModal(), 1200);
+          } else {
+            showAuthNotice("Registration successful! Check your email for confirmation link.");
+          }
+        } else {
+          const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+          });
+
+          if (error) throw error;
+
+          showAuthNotice("Login successful!");
+          setTimeout(() => closeAuthModal(), 1000);
+        }
+      } catch (err) {
+        showAuthNotice(err.message || "Authentication error occurred.", true);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = authMode === 'register' ? 'Register Account ➔' : 'Sign In ➔';
+      }
+    }
+
+    async function handleSignOut() {
+      if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+      }
+      setCurrentUser(null);
+      alert("You have logged out.");
+    }
+
+    function saveSupabaseCredentials() {
+      const url = document.getElementById('supabaseUrlInput').value.trim();
+      const key = document.getElementById('supabaseKeyInput').value.trim();
+
+      if (!url || !key) {
+        alert("Please provide both Supabase Project URL and Anon API Key.");
+        return;
+      }
+
+      localStorage.setItem('cb_sb_url', url);
+      localStorage.setItem('cb_sb_key', key);
+
+      initSupabase();
+      closeConfigModal();
+      alert("✅ Supabase credentials saved! You can now log in or register.");
+    }
+
+    function clearSupabaseCredentials() {
+      if (confirm("Reset and remove Supabase configuration?")) {
+        localStorage.removeItem('cb_sb_url');
+        localStorage.removeItem('cb_sb_key');
+        supabaseClient = null;
+        setCurrentUser(null);
+        document.getElementById('supabaseUrlInput').value = '';
+        document.getElementById('supabaseKeyInput').value = '';
+        closeConfigModal();
+        alert("Credentials cleared. Returned to local mode.");
+      }
+    }
+
+    function updateAuthUI(isConfigured) {
+      if (!isConfigured) {
+        const topbarBadge = document.getElementById('topbarAuthBadge');
+        if (topbarBadge) {
+          topbarBadge.className = "auth-status-chip guest";
+          topbarBadge.innerHTML = `⚡ Local Mode`;
+        }
+      }
+    }
+
+    /* ==========================================================================
+       8. INITIALIZATION ON PAGE LOAD
+       ========================================================================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      // Restore user name
+      if (appState.studentName) {
+        document.getElementById('sidebarStudentName').textContent = appState.studentName;
+        document.getElementById('profileName').value = appState.studentName;
+        const initials = appState.studentName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        document.getElementById('sidebarAvatar').textContent = initials;
+      }
+
+      // Initialize sections
+      renderRoadmap();
+      renderTasks();
+      initQuiz();
+      updateDashboardStats();
+
+      // Initialize Supabase Auth integration
+      initSupabase();
+    });
+  </script>
+</body>
+</html>
